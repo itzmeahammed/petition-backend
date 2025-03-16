@@ -1,29 +1,39 @@
 import jwt
 from Models.user_model import User
-# from Utils.CommonExceptions import CommonException
 import logging
-# from flask import jsonify
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
-class CheckAuthorization():
+
+class CheckAuthorization:
+    @staticmethod
     def VerifyToken(token):
         try:
             if not token:
                 return {"message": "Token is required"}, 401
+            
+            jwt_secret = os.getenv("JWT_SECRET")
+
             try:
-                decoded_token = jwt.decode(token, os.getenv("JWT_SECRET"), algorithms=["HS256"])
-            except jwt.ExpiredSignatureError  as e:
-                logging.error(f"Token Expired Error in verify_token: {str(e)}")
+                decoded_token = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+            except jwt.ExpiredSignatureError:
                 return {"message": "Token has expired"}, 401
-            except jwt.InvalidTokenError :
+            except jwt.DecodeError:
                 return {"message": "Invalid token"}, 401
-            user=User.objects(auth_token=token).first()
+            except jwt.InvalidTokenError:
+                return {"message": "Invalid token"}, 401
+
+            # user_id = decoded_token.get("user_id")
+            # if not user_id:
+            #     return {"message": "Invalid token payload"}, 401
+
+            user = User.objects(auth_token=token).first()
             if user:
                 return True
             else:
-                return {"message": "Token has expired or Invalid token "}, 401   
+                return {"message": "User not found"}, 401
+
         except Exception as e:
-            return {"message": f"Error: {str(e)}"}, 401
-        
-        
+            logging.error(f"Unexpected error in VerifyToken: {str(e)}")
+            return {"message": f"Error: {str(e)}"}, 500

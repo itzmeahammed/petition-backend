@@ -43,11 +43,13 @@ class UserController():
             exp_time = datetime.datetime.utcnow() + datetime.timedelta(days=1)
             token = jwt.encode(
                 {
+                    "user_id": str(user.id),
                     "email": user.email,
                     "username": user.username,
-                    "exp": exp_time,
+                    "exp": exp_time
                 },
                 os.getenv("JWT_SECRET"),
+                algorithm="HS256"
             )
 
             user.auth_token = token

@@ -62,12 +62,13 @@ class PetitionController():
             
             system_prompt = (
                 "Below is a user petition. You need to analyze the petition and assign it to the handler based on the "
-                "petition type or category. It should be assigned to 'admin' or 'superadmin', who are two types of "
+                "content,description and title of the petition. It should be assigned to 'admin' or 'superadmin', who are two types of "
                 "higher government officials responsible for resolving the user's problem. Your task is to decide "
                 "whether the petition is handled by 'admin' (smaller cases like theft, minor disputes) or 'superadmin' "
                 "(high-profile cases such as murder, rape, business-related issues, celebrity cases, confidential matters). "
-                "Analyze every single word in the petition before making your decision. Provide the response strictly in "
-                "the following JSON format: [{'handler':'admin' or 'superadmin'}]."
+                "Analyze every single word in the petition before making your decision. And also give the catogory of the  "
+                "petition and some tags like related to petition in a array of string . Provide the response strictly in "
+                "the following JSON format: [{'category':'eg theft',handler':'admin' or 'superadmin',tags:[]}]."
             )
             
             user_prompt = f"Title: {data.get('petition_title')}\nDescription: {data.get('petition_description')}\nContent: {data.get('petition_content')}"
@@ -80,6 +81,8 @@ class PetitionController():
                 formatted_response = ai_response.replace("'", '"')
                 handler_data = json.loads(formatted_response)
                 handler = handler_data[0].get('handler')
+                catogory = handler_data[0].get('category')
+                tags = handler_data[0].get('tags')
 
             except json.JSONDecodeError as e:
                 logging.error(f"JSON parsing error: {str(e)} - Trying ast.literal_eval()")
@@ -87,18 +90,22 @@ class PetitionController():
                 try:
                     handler_data = ast.literal_eval(ai_response)
                     handler = handler_data[0].get('handler')
+                    catogory = handler_data[0].get('category')
+                    tags = handler_data[0].get('tags')
 
                 except (ValueError, SyntaxError) as e:
                     logging.error(f"Error parsing AI response with ast: {str(e)}")
                     handler = "admin"
+                    catogory= ''
+                    tags = []
             
             petition = Petition(
                 user=user,
-                petition_title=data.get('petition_title'),
-                petition_description=data.get('petition_description'),
-                petition_content=data.get('petition_content'),
-                category=data.get('category'),
-                tags=data.get('tags', []),
+                title=data.get('title'),
+                description=data.get('description'),
+                content=data.get('content'),
+                category=catogory,
+                tags=tags,
                 handler=handler
             )
             petition.validate()
