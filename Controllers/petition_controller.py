@@ -107,7 +107,7 @@ class PetitionController():
                 category=catogory,
                 tags=tags,
                 handler=handler,
-                data=data.get('date')
+                date=data.get('date')
             )
             petition.validate()
             petition.save()
