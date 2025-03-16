@@ -67,8 +67,8 @@ class PetitionController():
                 "whether the petition is handled by 'admin' (smaller cases like theft, minor disputes) or 'superadmin' "
                 "(high-profile cases such as murder, rape, business-related issues, celebrity cases, confidential matters). "
                 "Analyze every single word in the petition before making your decision. And also give the catogory of the  "
-                "petition and some tags like related to petition in a array of string . Provide the response strictly in "
-                "the following JSON format: [{'category':'eg theft',handler':'admin' or 'superadmin',tags:[]}]."
+                "petition and some tags like related to petition in a array of string at the end provide your some sort of solution to officers too. Provide the response strictly in "
+                "the following JSON format: [{'category':'eg theft',handler':'admin' or 'superadmin',tags:[],'solution':a solution}]."
             )
             
             user_prompt = f"Title: {data.get('title')}\nDescription: {data.get('description')}\nContent: {data.get('content')}"
@@ -83,6 +83,7 @@ class PetitionController():
                 handler = handler_data[0].get('handler')
                 catogory = handler_data[0].get('category')
                 tags = handler_data[0].get('tags')
+                solution = handler_data[0].get('solution')
 
             except json.JSONDecodeError as e:
                 logging.error(f"JSON parsing error: {str(e)} - Trying ast.literal_eval()")
@@ -92,12 +93,14 @@ class PetitionController():
                     handler = handler_data[0].get('handler')
                     catogory = handler_data[0].get('category')
                     tags = handler_data[0].get('tags')
+                    solution = handler_data[0].get('solution')
 
                 except (ValueError, SyntaxError) as e:
                     logging.error(f"Error parsing AI response with ast: {str(e)}")
                     handler = "admin"
                     catogory= ''
                     tags = []
+                    solution =''
             
             petition = Petition(
                 user=user,
@@ -107,6 +110,7 @@ class PetitionController():
                 category=catogory,
                 tags=tags,
                 handler=handler,
+                solution = solution,
                 date=data.get('date')
             )
             petition.validate()
