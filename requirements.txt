@@ -1,0 +1,7 @@
+flask
+mongoengine
+dotenv
+pyJWT
+langchain_google_genai
+langchain_openai
+flask_cors
