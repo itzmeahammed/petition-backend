@@ -11,6 +11,7 @@ class Petition(Document):
     handler = StringField(choices=['admin','superadmin'],required=True)
     tags = ListField(StringField())
     status = StringField(default="Pending")
+    station = StringField()
     date = StringField(required=True)
     solution = StringField(required=True)
     created_at = DateTimeField(default=datetime.utcnow)
@@ -29,6 +30,7 @@ class Petition(Document):
             "tags": self.tags,
             "date": self.date,
             "solution": self.solution,
+            "station": self.station,
             "status": self.status,
             "created_at": self.created_at.strftime("%d %B %Y"),
             "updated_at": self.updated_at.strftime("%d %B %Y"),
