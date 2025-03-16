@@ -13,6 +13,17 @@ load_dotenv()
 
 
 class UserController():
+    def getAllUser():
+        try:
+            users = User.objects()
+            if users:
+                return jsonify([user.to_json() for user in users]), 200
+            else:
+                return jsonify([]), 200
+        except Exception as e:
+            logging.error(f"Error in getAllUser: {str(e)}")
+            return CommonException.handleException(e)
+        
     def getOneUser():
         try:
             token = request.headers.get('Authorization')
