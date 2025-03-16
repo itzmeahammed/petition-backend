@@ -11,6 +11,7 @@ class Petition(Document):
     handler = StringField(choices=['admin','superadmin'],required=True)
     tags = ListField(StringField())
     status = StringField(default="Pending")
+    date = StringField(required=True)
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
     image_url = StringField()
@@ -25,6 +26,7 @@ class Petition(Document):
             "category": self.category,
             "handler": self.handler,
             "tags": self.tags,
+            "date": self.date,
             "status": self.status,
             "created_at": self.created_at.strftime("%d %B %Y"),
             "updated_at": self.updated_at.strftime("%d %B %Y"),

@@ -120,6 +120,8 @@ class PetitionController():
         try:
             # token = request.headers.get('Authorization')
             id = request.args.get('id')
+            if not id:
+                return CommonException.IdRequiredException()
             data = request.get_json()
             if not data:
                 return CommonException.DataRequiredException()
@@ -138,6 +140,8 @@ class PetitionController():
             token = request.headers.get('Authorization')
             user = User.objects(auth_token=token).first()
             id = request.args.get('id')
+            if not id:
+                return CommonException.IdRequiredException()
             petition = Petition.objects(user=user.id, id=id).first()
             if petition:
                 petition.delete()
