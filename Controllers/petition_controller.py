@@ -71,7 +71,7 @@ class PetitionController():
                 "the following JSON format: [{'category':'eg theft',handler':'admin' or 'superadmin',tags:[]}]."
             )
             
-            user_prompt = f"Title: {data.get('petition_title')}\nDescription: {data.get('petition_description')}\nContent: {data.get('petition_content')}"
+            user_prompt = f"Title: {data.get('title')}\nDescription: {data.get('description')}\nContent: {data.get('content')}"
             
             input_prompt = [("system", system_prompt), ("user", user_prompt)]
             model = request.args.get('model', 'OpenAI')
