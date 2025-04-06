@@ -33,9 +33,10 @@ class FeedbackController:
                 return jsonify({"message": "Petition ID required"}), 400
 
             feedback = Feedback(user=user.id,**data)
+            feedback.validate()
             feedback.save()
 
-            return jsonify({"message": "Feedback added successfully", "feedback": feedback.to_json()}), 201
+            return jsonify({"message": "Feedback added successfully", "feedback": str(feedback.id)}), 200
 
         except Exception as e:
             logging.error(f"Error in createFeedback: {str(e)}")
