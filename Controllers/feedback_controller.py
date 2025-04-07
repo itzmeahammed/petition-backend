@@ -14,7 +14,7 @@ class FeedbackController:
             feedbacks = Feedback.objects(petition=petition)
             if feedbacks:
                 return jsonify([feedback.to_json() for feedback in feedbacks]), 200
-            return jsonify({"message": "No feedback found for this petition"}), 404
+            return jsonify({"message": "No feedback found for this petition"}), 200
         except Exception as e:
             logging.error(f"Error in getFeedbackByPetition: {str(e)}")
             return CommonException.handleException(e)
