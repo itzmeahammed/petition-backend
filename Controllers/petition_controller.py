@@ -11,7 +11,11 @@ import ast
 class PetitionController():
     def getPetition():
         try:
-            petitions = Petition.objects()
+            query = request.args.to_dict()
+            if query:
+                petitions = Petition.objects(**query)
+            else:
+                petitions = Petition.objects()
             if petitions:
                 return jsonify([petition.to_json() for petition in petitions]), 200
             else:
@@ -48,6 +52,8 @@ class PetitionController():
         except Exception as e:
             logging.error(f"Error in getPetitionsByUser: {str(e)}")
             return CommonException.handleException(e)
+        
+    
     
     def createPetition():
         try:
