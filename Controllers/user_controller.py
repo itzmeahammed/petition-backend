@@ -36,47 +36,6 @@ class UserController():
             logging.error(f"Error in getOneUser: {str(e)}")
             return CommonException.handleException(e)
 
-    def signup():
-        try:
-            data = request.get_json()
-            if not data:
-                return CommonException.DataRequiredException()
-            
-            if 'password' not in data:
-                return jsonify({"Error": "Password is required"}), 400
-
-            data['password'] = generate_password_hash(data['password'])
-            
-            user = User(**data)
-            user.validate()
-            user.save()
-
-            exp_time = datetime.datetime.utcnow() + datetime.timedelta(days=1)
-            token = jwt.encode(
-                {
-                    "user_id": str(user.id),
-                    "email": user.email,
-                    "username": user.username,
-                    "exp": exp_time
-                },
-                os.getenv("JWT_SECRET"),
-                algorithm="HS256"
-            )
-
-            user.auth_token = token
-            user.save()
-
-            return jsonify({
-                "role": user.role,
-                "token": token,
-                "exp": exp_time
-            }), 200
-
-        except Exception as e:
-            logging.error(f"Error in signup: {str(e)}")
-            return CommonException.handleException(e)
-
-
     def updateUser():
         try:
             data = request.get_json()
@@ -108,6 +67,84 @@ class UserController():
             logging.error(f"Error in deleteUser: {str(e)}")
             return CommonException.handleException(e)
 
+    def signup():
+        try:
+            data = request.get_json()
+            if not data:
+                return CommonException.DataRequiredException()
+            
+            if 'password' not in data:
+                return jsonify({"Error": "Password is required"}), 400
+
+            # Hash the password
+            data['password'] = generate_password_hash(data['password'])
+            
+            # Check if the email is already taken
+            existing_user = User.objects(email=data['email']).first()
+            if existing_user:
+                return jsonify({"Error": "Email is already registered"}), 400
+
+            # Admin specific logic
+            if data['role'] == 'admin':
+                district = data.get('district')
+                station = data.get('station')
+                
+                if not district or not station:
+                    return jsonify({"Error": "District and Station are required for Admin."}), 400
+                
+                # Check if this station already has an admin
+                existing_station_admin = User.objects(station=station).first()
+                if existing_station_admin:
+                    return jsonify({"Error": f"Station {station} already has an admin."}), 400
+                
+                # Add district and station to the data
+                data['district'] = district
+                data['station'] = station
+                
+            # Super Admin specific logic
+            if data['role'] == 'superadmin':
+                district = data.get('district')
+                if not district:
+                    return jsonify({"Error": "District is required for Super Admin."}), 400
+                
+                # Check if this district already has a super admin
+                existing_district_superadmin = User.objects(district=district).first()
+                if existing_district_superadmin:
+                    return jsonify({"Error": f"District {district} already has a Super Admin."}), 400
+                
+                # Add district to the data
+                data['district'] = district
+            
+            user = User(**data)
+            user.validate()
+            user.save()
+
+            # Generate JWT token for the user
+            exp_time = datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            token = jwt.encode(
+                {
+                    "user_id": str(user.id),
+                    "email": user.email,
+                    "username": user.username,
+                    "exp": exp_time
+                },
+                os.getenv("JWT_SECRET"),
+                algorithm="HS256"
+            )
+
+            user.auth_token = token
+            user.save()
+
+            return jsonify({
+                "role": user.role,
+                "token": token,
+                "exp": exp_time
+            }), 200
+
+        except Exception as e:
+            logging.error(f"Error in signup: {str(e)}")
+            return CommonException.handleException(e)
+
     def login():
         try:
             data = request.get_json()
@@ -128,9 +165,23 @@ class UserController():
                 )
                 user.auth_token = token
                 user.save()
-                return {"token": token, "exp": exp_time,"role":user.role}, 200
+
+                # Return district and station information based on role
+                user_info = {
+                    "token": token,
+                    "exp": exp_time,
+                    "role": user.role
+                }
+
+                if user.role == "admin":
+                    user_info["district"] = user.district
+                    user_info["station"] = user.station
+                elif user.role == "superadmin":
+                    user_info["district"] = user.district
+                
+                return jsonify(user_info), 200
             else:
-                return {"error": "Invalid username or password"}, 400
+                return jsonify({"error": "Invalid username or password"}), 400
         except Exception as e:
             logging.error(f"Error in login: {str(e)}")
             return CommonException.handleException(e)

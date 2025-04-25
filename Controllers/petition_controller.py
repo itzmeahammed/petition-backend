@@ -11,11 +11,16 @@ import ast
 class PetitionController():
     def getPetition():
         try:
+            # Extract the query parameters
             query = request.args.to_dict()
+
+            # If district or station is passed in the query, filter accordingly
+            # Otherwise, use the default query with no filters
             if query:
                 petitions = Petition.objects(**query)
             else:
                 petitions = Petition.objects()
+
             if petitions:
                 return jsonify([petition.to_json() for petition in petitions]), 200
             else:
@@ -23,14 +28,24 @@ class PetitionController():
         except Exception as e:
             logging.error(f"Error in getPetition: {str(e)}")
             return CommonException.handleException()
-        
 
     def getPetitionByHandler():
         try:
             handler = request.args.get('handler')
+            district = request.args.get('district')  # Get district parameter
+
+            # Ensure 'handler' parameter is provided
             if not handler:
                 return CommonException.ParamsRequiredException()
-            petitions = Petition.objects(handler=handler).all()
+
+            # Build the query to filter by handler and optionally by district
+            query = {'handler': handler}
+            if district:
+                query['district'] = district  # Add district filter if provided
+
+            # Fetch the petitions that match the query
+            petitions = Petition.objects(**query).all()
+
             if petitions:
                 return jsonify([petition.to_json() for petition in petitions]), 200
             else:
@@ -60,25 +75,25 @@ class PetitionController():
             data = request.get_json()
             if not data:
                 return CommonException.DataRequiredException()
-            
+
             token = request.headers.get('Authorization')
             user = User.objects(auth_token=token).first()
             if not user:
                 return CommonException.InvalidIdException()
-            
+
+            # Prepare the AI model input
             system_prompt = (
                 "Below is a user petition. You need to analyze the petition and assign it to the handler based on the "
-                "content,description and title of the petition. It should be assigned to 'admin' or 'superadmin', who are two types of "
+                "content, description, and title of the petition. It should be assigned to 'admin' or 'superadmin', who are two types of "
                 "higher government officials responsible for resolving the user's problem. Your task is to decide "
                 "whether the petition is handled by 'admin' (smaller cases like theft, minor disputes) or 'superadmin' "
                 "(high-profile cases such as murder, rape, business-related issues, celebrity cases, confidential matters). "
-                "Analyze every single word in the petition before making your decision. And also give the catogory of the  "
-                "petition and some tags like related to petition in a array of string at the end provide your some sort of solution to officers too. Provide the response strictly in "
-                "the following JSON format: [{'category':'eg theft',handler':'admin' or 'superadmin',tags:[],'solution':a solution}]."
+                "Analyze every single word in the petition before making your decision. And also give the category of the "
+                "petition and some tags like related to petition in an array of strings at the end provide some solution to officers too. Provide the response strictly in "
+                "the following JSON format: [{'category':'eg theft', 'handler':'admin' or 'superadmin', 'tags':[], 'solution': 'a solution'}]."
             )
             
             user_prompt = f"Title: {data.get('title')}\nDescription: {data.get('description')}\nContent: {data.get('content')}"
-            
             input_prompt = [("system", system_prompt), ("user", user_prompt)]
             model = request.args.get('model', 'OpenAI')
             ai_response = LlmModelChatBotController.ConfigureAIModel(input_prompt, model)
@@ -87,41 +102,42 @@ class PetitionController():
                 formatted_response = ai_response.replace("'", '"')
                 handler_data = json.loads(formatted_response)
                 handler = handler_data[0].get('handler')
-                catogory = handler_data[0].get('category')
+                category = handler_data[0].get('category')
                 tags = handler_data[0].get('tags')
                 solution = handler_data[0].get('solution')
 
             except json.JSONDecodeError as e:
                 logging.error(f"JSON parsing error: {str(e)} - Trying ast.literal_eval()")
-
                 try:
                     handler_data = ast.literal_eval(ai_response)
                     handler = handler_data[0].get('handler')
-                    catogory = handler_data[0].get('category')
+                    category = handler_data[0].get('category')
                     tags = handler_data[0].get('tags')
                     solution = handler_data[0].get('solution')
-
                 except (ValueError, SyntaxError) as e:
                     logging.error(f"Error parsing AI response with ast: {str(e)}")
                     handler = "admin"
-                    catogory= ''
+                    category = ''
                     tags = []
-                    solution =''
-            
+                    solution = ''
+
+            # Creating the petition object with district and station
             petition = Petition(
                 user=user,
                 title=data.get('title'),
                 description=data.get('description'),
                 content=data.get('content'),
-                category=catogory,
+                category=category,
                 tags=tags,
                 handler=handler,
-                solution = solution,
+                solution=solution,
                 date=data.get('date'),
-                station = data.get('station')
+                station=data.get('station'),  # Save the station
+                district=data.get('district')  # Save the district
             )
             petition.validate()
             petition.save()
+
             return jsonify({"Message": "Petition Created Successfully", "Handler": handler}), 200
         except Exception as e:
             logging.error(f"Error in createPetition: {str(e)}")
